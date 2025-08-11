@@ -29,8 +29,8 @@ FEATURE_COLUMNS = [
 @st.cache_resource
 def load_models():
     # Load models once; no UI for paths to keep it simple
-    rlam_model = joblib.load("models/best_xgboost_model_wl.pkl")
-    fwhm_model = joblib.load("models/best_xgb_model_fwhm.pkl")
+    rlam_model = joblib.load("best_xgboost_model_wl.pkl")
+    fwhm_model = joblib.load("best_xgb_model_fwhm.pkl")
     return rlam_model, fwhm_model
 
 def build_features(ri_values, mat1, mat2) -> pd.DataFrame:
@@ -199,3 +199,4 @@ if eval_btn:
 
 st.markdown("---")
 st.caption("Models: best_xgboost_model_wl.pkl (log-X, log-y), best_xgb_model_fwhm.pkl (raw). Geometry auto-set by material. Metrics per your specification.")
+
