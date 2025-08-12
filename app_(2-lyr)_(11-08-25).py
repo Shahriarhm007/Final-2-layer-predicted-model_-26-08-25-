@@ -168,4 +168,9 @@ if eval_btn:
             colD.metric("FOM", f"{metrics['FOM']:.6f}")
 
             st.caption(
-                f"S_max at RI={metrics
+                f"S_max at RI={metrics['ri_at_Smax']:.5f} "
+                f"(λ_left={metrics['lambda_nm_at_Smax_left']:.3f} nm, "
+                f"FWHM_left={metrics['fwhm_nm_at_Smax_left']:.3f} nm)"
+            )
+
+
