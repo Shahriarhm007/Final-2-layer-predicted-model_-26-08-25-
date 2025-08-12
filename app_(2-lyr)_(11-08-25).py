@@ -5,13 +5,12 @@ import joblib
 
 st.set_page_config(page_title="SPR Performance Evaluation (2-layer)", layout="wide")
 st.title("SPR Performance Evaluation (2-layer)")
-st.caption("Enter analyte RI range and materials. Click Calculate (R-lam) then Evaluate Performance.")
+st.caption("Select materials. Click Calculate (R-lam) then Evaluate Performance.")
 
 # -----------------------------
 # Constants and helpers
 # -----------------------------
 EPS = 1e-9
-
 MATERIAL_CODE = {"Au": 1, "Ag": 2, "Cu": 3, "C": 4}
 
 def thickness_um(material: str) -> float:
@@ -28,10 +27,22 @@ FEATURE_COLUMNS = [
 
 @st.cache_resource
 def load_models():
-    # Load models once; no UI for paths to keep it simple
     rlam_model = joblib.load("best_xgboost_model_wl.pkl")
     fwhm_model = joblib.load("best_xgb_model_fwhm.pkl")
     return rlam_model, fwhm_model
+
+def get_fixed_ri_values(mat1: str, mat2: str) -> np.ndarray:
+    mset = {mat1.lower(), mat2.lower()}
+    if "c" in mset and ("au" in mset or "ag" in mset):
+        return np.array([1.33, 1.35, 1.36, 1.37, 1.375, 1.38])
+    elif "c" in mset and "cu" in mset:
+        return np.array([1.33, 1.35, 1.36, 1.37, 1.38, 1.385, 1.39])
+    elif ("au" in mset and "ag" in mset) or (mat1 == "Au" and mat2 == "Au") or (mat1 == "Ag" and mat2 == "Ag"):
+        return np.array([1.33, 1.35, 1.37, 1.39, 1.40, 1.405, 1.41])
+    elif ("cu" in mset and ("au" in mset or "ag" in mset)) or (mat1 == "Cu" and mat2 == "Cu"):
+        return np.array([1.33, 1.35, 1.37, 1.39, 1.40, 1.405, 1.41, 1.415, 1.42])
+    else:
+        return np.array([1.33, 1.35, 1.37])  # fallback
 
 def build_features(ri_values, mat1, mat2) -> pd.DataFrame:
     t1 = thickness_um(mat1)
@@ -48,28 +59,27 @@ def build_features(ri_values, mat1, mat2) -> pd.DataFrame:
     return df[FEATURE_COLUMNS]
 
 def predict_rlam_um(rlam_model, X_raw: pd.DataFrame) -> np.ndarray:
-    # Training used log on features and target; invert afterward
     X_log = np.log(X_raw + EPS)
     y_log = rlam_model.predict(X_log)
-    return np.exp(y_log)  # µm
+    return np.exp(y_log)
 
 def predict_fwhm_um(fwhm_model, X_raw: pd.DataFrame) -> np.ndarray:
-    return fwhm_model.predict(X_raw)  # µm (raw-trained)
+    return fwhm_model.predict(X_raw)
 
 def sensitivity_nm_per_RIU(ri: np.ndarray, lam_um: np.ndarray) -> np.ndarray:
     lam_nm = lam_um * 1000.0
     dlam = lam_nm[1:] - lam_nm[:-1]
     dn = ri[1:] - ri[:-1]
     S = np.divide(dlam, dn, out=np.full_like(dlam, np.nan), where=dn!=0)
-    return S  # aligned to left RI
+    return S
 
 def evaluate_metrics(ri: np.ndarray, lam_um: np.ndarray, fwhm_um: np.ndarray):
     S = sensitivity_nm_per_RIU(ri, lam_um)
     if len(S) == 0 or np.all(~np.isfinite(S)):
         return None
-    idx_left = int(np.nanargmax(S))        # left index for S_max
-    S_max = float(S[idx_left])             # nm/RIU
-    ri_star = float(ri[idx_left])          # RI at left
+    idx_left = int(np.nanargmax(S))
+    S_max = float(S[idx_left])
+    ri_star = float(ri[idx_left])
     lam_nm_left = float(lam_um[idx_left] * 1000.0)
     fwhm_nm_left = float(fwhm_um[idx_left] * 1000.0)
     Q = lam_nm_left / fwhm_nm_left if fwhm_nm_left > 0 else np.nan
@@ -86,16 +96,8 @@ def evaluate_metrics(ri: np.ndarray, lam_um: np.ndarray, fwhm_um: np.ndarray):
     }
 
 # -----------------------------
-# UI: Minimal inputs
+# UI: Material selection only
 # -----------------------------
-col1, col2, col3 = st.columns([1,1,1])
-with col1:
-    ri_start = st.number_input("Start RI", value=1.33000, step=0.001, format="%.5f")
-with col2:
-    ri_step = st.number_input("Step size", value=0.00500, min_value=0.00001, step=0.001, format="%.5f")
-with col3:
-    ri_stop = st.number_input("Stop RI", value=1.41000, step=0.001, format="%.5f")
-
 m1, m2 = st.columns(2)
 with m1:
     mat1 = st.selectbox("Plasmonic Metal 1st Layer", ["Au", "Ag", "Cu", "C"], index=1)
@@ -106,7 +108,6 @@ btn1, btn2 = st.columns(2)
 calc_btn = btn1.button("Calculate (R-lam)", type="primary")
 eval_btn = btn2.button("Evaluate Performance")
 
-# Persistent storage for predictions
 if "table" not in st.session_state:
     st.session_state.table = None
 if "ri_values" not in st.session_state:
@@ -120,28 +121,18 @@ if "fwhm_um" not in st.session_state:
 # Actions
 # -----------------------------
 if calc_btn:
-    if ri_step <= 0 or ri_start >= ri_stop:
-        st.error("Check RI range and step.")
-        st.stop()
     try:
         rlam_model, fwhm_model = load_models()
     except Exception as e:
         st.error(f"Failed to load models: {e}")
         st.stop()
 
-    # Build RI grid inclusive of stop (with float tolerance)
-    n_steps = int(np.floor((ri_stop - ri_start) / ri_step)) + 1
-    ri_values = np.round(ri_start + np.arange(n_steps) * ri_step, 6)
-    if ri_values[-1] < ri_stop - 1e-9:
-        ri_values = np.append(ri_values, np.round(ri_stop, 6))
-
+    ri_values = get_fixed_ri_values(mat1, mat2)
     X = build_features(ri_values, mat1, mat2)
 
-    # Predict
     lam_um = predict_rlam_um(rlam_model, X)
     fwhm_um = predict_fwhm_um(fwhm_model, X)
 
-    # Store
     st.session_state.ri_values = ri_values
     st.session_state.lam_um = lam_um
     st.session_state.fwhm_um = fwhm_um
@@ -177,26 +168,4 @@ if eval_btn:
             colD.metric("FOM", f"{metrics['FOM']:.6f}")
 
             st.caption(
-                f"S_max at RI={metrics['ri_at_Smax']:.5f} "
-                f"(λ_left={metrics['lambda_nm_at_Smax_left']:.3f} nm, "
-                f"FWHM_left={metrics['fwhm_nm_at_Smax_left']:.3f} nm)"
-            )
-
-            # Also show full table with FWHM and S aligned to left RI (prepend NaN for first row)
-            S = metrics["S_all"]
-            S_aligned = np.concatenate([[np.nan], S])
-            full = pd.DataFrame({
-                "Analyte RI": ri_values,
-                "Resonance Wavelength (µm)": lam_um,
-                "FWHM (µm)": fwhm_um,
-                "Wavelength Sensitivity (nm/RIU)": S_aligned
-            })
-            st.subheader("Full results")
-            st.dataframe(full, use_container_width=True)
-
-            csv2 = full.to_csv(index=False).encode("utf-8")
-            st.download_button("Download CSV (full table)", data=csv2, file_name=f"full_metrics_{mat1}-{mat2}.csv", mime="text/csv")
-
-st.markdown("---")
-st.caption("Models: best_xgboost_model_wl.pkl (log-X, log-y), best_xgb_model_fwhm.pkl (raw). Geometry auto-set by material. Metrics per your specification.")
-
+                f"S_max at RI={metrics
