@@ -28,7 +28,7 @@ FEATURE_COLUMNS = [
 @st.cache_resource
 def load_models():
     rlam_model = joblib.load("best_xgboost_model_wl.pkl")
-    fwhm_model = joblib.load("best_xgb_model_fwhm.pkl")
+    fwhm_model = joblib.load("best_poly-regression_model_fwhm.pkl")
     return rlam_model, fwhm_model
 
 def get_fixed_ri_values(mat1: str, mat2: str) -> np.ndarray:
@@ -172,5 +172,6 @@ if eval_btn:
                 f"(λ_left={metrics['lambda_nm_at_Smax_left']:.3f} nm, "
                 f"FWHM_left={metrics['fwhm_nm_at_Smax_left']:.3f} nm)"
             )
+
 
 
