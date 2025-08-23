@@ -27,9 +27,9 @@ FEATURE_COLUMNS = [
 
 @st.cache_resource
 def load_models():
-    # XGBoost model (for R-lam)
+    # XGBoost model (for R-lam, trained on log λ)
     rlam_model = joblib.load("best_xgboost_model_wl.pkl")
-    # Polynomial Regression pipeline (for FWHM)
+    # Polynomial Regression pipeline (for FWHM, trained on log FWHM)
     fwhm_model = joblib.load("best_poly_pipeline_fwhm.pkl")
     return rlam_model, fwhm_model
 
@@ -63,11 +63,13 @@ def build_features(ri_values, mat1, mat2) -> pd.DataFrame:
 def predict_rlam_um(rlam_model, X_raw: pd.DataFrame) -> np.ndarray:
     X_log = np.log(X_raw + EPS)
     y_log = rlam_model.predict(X_log)
-    return np.exp(y_log)
+    y = np.exp(y_log)
+    return np.maximum(y, EPS)
 
 def predict_fwhm_um(fwhm_model, X_raw: pd.DataFrame) -> np.ndarray:
-    # fwhm_model is a Pipeline: PolynomialFeatures + LinearRegression
-    return fwhm_model.predict(X_raw)
+    y_log = fwhm_model.predict(X_raw)   # log(FWHM)
+    y = np.exp(y_log)                   # inverse log-transform
+    return np.maximum(y, EPS)
 
 def sensitivity_nm_per_RIU(ri: np.ndarray, lam_um: np.ndarray) -> np.ndarray:
     lam_nm = lam_um * 1000.0
