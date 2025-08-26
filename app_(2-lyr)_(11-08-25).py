@@ -110,7 +110,7 @@ with m2:
     mat2 = st.selectbox("Plasmonic Metal 2nd Layer", ["Au", "Ag", "Cu", "C"], index=0)
 
 btn1, btn2 = st.columns(2)
-calc_btn = btn1.button("Calculate (R-lam)", type="primary")
+calc_btn = btn1.button("Predict", type="primary")
 eval_btn = btn2.button("Evaluate Performance")
 
 if "table" not in st.session_state:
@@ -167,7 +167,7 @@ if calc_btn:
 
 if eval_btn:
     if st.session_state.table is None:
-        st.warning("Please click 'Calculate (R-lam)' first.")
+        st.warning("Please click 'Predict' first.")
     else:
         ri_values = st.session_state.ri_values
         lam_um = st.session_state.lam_um
@@ -208,3 +208,4 @@ if st.session_state.metrics is not None:
         f"(λ_left={metrics['lambda_nm_at_Smax_left']:.3f} nm, "
         f"FWHM_left={metrics['fwhm_nm_at_Smax_left']:.3f} nm)"
     )
+
