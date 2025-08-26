@@ -123,6 +123,8 @@ if "fwhm_um" not in st.session_state:
     st.session_state.fwhm_um = None
 if "current_materials" not in st.session_state:
     st.session_state.current_materials = None
+if "metrics" not in st.session_state:
+    st.session_state.metrics = None
 
 # -----------------------------
 # Actions
@@ -173,17 +175,25 @@ if eval_btn:
         if metrics is None:
             st.error("Unable to compute sensitivity. Check RI step and predictions.")
         else:
-            colA, colB, colC, colD = st.columns(4)
-            colA.metric("Model", st.session_state.current_materials)
-            colB.metric("Max. Wavelength Sensitivity", f"{metrics['S_max']:.3f} nm/RIU")
-            colC.metric("Q-factor", f"{metrics['Q']:.3f}")
-            colD.metric("FOM", f"{metrics['FOM']:.6f}")
+            # Store metrics in session state
+            st.session_state.metrics = metrics
 
-            st.caption(
-                f"S_max at RI={metrics['ri_at_Smax']:.5f} "
-                f"(λ_left={metrics['lambda_nm_at_Smax_left']:.3f} nm, "
-                f"FWHM_left={metrics['fwhm_nm_at_Smax_left']:.3f} nm)"
-            )
+# -----------------------------
+# Display metrics if they exist
+# -----------------------------
+if st.session_state.metrics is not None:
+    metrics = st.session_state.metrics
+    colA, colB, colC, colD = st.columns(4)
+    colA.metric("Model", st.session_state.current_materials)
+    colB.metric("Max. Wavelength Sensitivity", f"{metrics['S_max']:.3f} nm/RIU")
+    colC.metric("Q-factor", f"{metrics['Q']:.3f}")
+    colD.metric("FOM", f"{metrics['FOM']:.6f}")
+
+    st.caption(
+        f"S_max at RI={metrics['ri_at_Smax']:.5f} "
+        f"(λ_left={metrics['lambda_nm_at_Smax_left']:.3f} nm, "
+        f"FWHM_left={metrics['fwhm_nm_at_Smax_left']:.3f} nm)"
+    )
 
 # -----------------------------
 # Display table if it exists (moved outside button conditions)
