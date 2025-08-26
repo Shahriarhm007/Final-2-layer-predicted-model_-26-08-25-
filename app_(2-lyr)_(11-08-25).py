@@ -151,6 +151,8 @@ if calc_btn:
     st.session_state.lam_um = lam_um
     st.session_state.fwhm_um = fwhm_um
     st.session_state.current_materials = f"{mat1}-{mat2}"
+    # Clear previous metrics when calculating new results
+    st.session_state.metrics = None
 
     # Check lengths
     if not (len(ri_values) == len(lam_um) == len(fwhm_um)):
