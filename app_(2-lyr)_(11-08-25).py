@@ -181,7 +181,7 @@ if eval_btn:
             st.session_state.metrics = metrics
 
 # -----------------------------
-# Display metrics if they exist
+# Display results
 # -----------------------------
 if st.session_state.metrics is not None:
     metrics = st.session_state.metrics
@@ -197,9 +197,7 @@ if st.session_state.metrics is not None:
         f"FWHM_left={metrics['fwhm_nm_at_Smax_left']:.3f} nm)"
     )
 
-# -----------------------------
-# Display table if it exists (moved outside button conditions)
-# -----------------------------
+# Display table if it exists (moved to ensure persistence after Evaluate Performance)
 if st.session_state.table is not None:
     st.subheader("R-lam results")
     st.dataframe(st.session_state.table, use_container_width=True)
