@@ -177,12 +177,24 @@ if eval_btn:
         if metrics is None:
             st.error("Unable to compute sensitivity. Check RI step and predictions.")
         else:
-            # Store metrics in session state
+            # Store metrics in session state without clearing table
             st.session_state.metrics = metrics
 
 # -----------------------------
 # Display results
 # -----------------------------
+if st.session_state.table is not None:
+    st.subheader("R-lam results")
+    st.dataframe(st.session_state.table, use_container_width=True)
+
+    csv = st.session_state.table.to_csv(index=False).encode("utf-8")
+    st.download_button(
+        "Download CSV (RI vs R-lam + FWHM)",
+        data=csv,
+        file_name=f"R_lambda_{st.session_state.current_materials}.csv",
+        mime="text/csv"
+    )
+
 if st.session_state.metrics is not None:
     metrics = st.session_state.metrics
     colA, colB, colC, colD = st.columns(4)
@@ -195,17 +207,4 @@ if st.session_state.metrics is not None:
         f"S_max at RI={metrics['ri_at_Smax']:.5f} "
         f"(λ_left={metrics['lambda_nm_at_Smax_left']:.3f} nm, "
         f"FWHM_left={metrics['fwhm_nm_at_Smax_left']:.3f} nm)"
-    )
-
-# Display table if it exists (moved to ensure persistence after Evaluate Performance)
-if st.session_state.table is not None:
-    st.subheader("R-lam results")
-    st.dataframe(st.session_state.table, use_container_width=True)
-
-    csv = st.session_state.table.to_csv(index=False).encode("utf-8")
-    st.download_button(
-        "Download CSV (RI vs R-lam + FWHM)",
-        data=csv,
-        file_name=f"R_lambda_{st.session_state.current_materials}.csv",
-        mime="text/csv"
     )
