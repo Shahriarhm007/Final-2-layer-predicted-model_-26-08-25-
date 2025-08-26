@@ -121,6 +121,8 @@ if "lam_um" not in st.session_state:
     st.session_state.lam_um = None
 if "fwhm_um" not in st.session_state:
     st.session_state.fwhm_um = None
+if "current_materials" not in st.session_state:
+    st.session_state.current_materials = None
 
 # -----------------------------
 # Actions
@@ -146,6 +148,7 @@ if calc_btn:
     st.session_state.ri_values = ri_values
     st.session_state.lam_um = lam_um
     st.session_state.fwhm_um = fwhm_um
+    st.session_state.current_materials = f"{mat1}-{mat2}"
 
     # Check lengths
     if not (len(ri_values) == len(lam_um) == len(fwhm_um)):
@@ -157,17 +160,6 @@ if calc_btn:
             "FWHM (µm)": fwhm_um
         })
         st.session_state.table = table
-
-        st.subheader("R-lam results")
-        st.dataframe(table, use_container_width=True)
-
-        csv = table.to_csv(index=False).encode("utf-8")
-        st.download_button(
-            "Download CSV (RI vs R-lam + FWHM)",
-            data=csv,
-            file_name=f"R_lambda_{mat1}-{mat2}.csv",
-            mime="text/csv"
-        )
 
 if eval_btn:
     if st.session_state.table is None:
@@ -182,7 +174,7 @@ if eval_btn:
             st.error("Unable to compute sensitivity. Check RI step and predictions.")
         else:
             colA, colB, colC, colD = st.columns(4)
-            colA.metric("Model", f"{mat1}-{mat2}")
+            colA.metric("Model", st.session_state.current_materials)
             colB.metric("Max. Wavelength Sensitivity", f"{metrics['S_max']:.3f} nm/RIU")
             colC.metric("Q-factor", f"{metrics['Q']:.3f}")
             colD.metric("FOM", f"{metrics['FOM']:.6f}")
@@ -192,3 +184,18 @@ if eval_btn:
                 f"(λ_left={metrics['lambda_nm_at_Smax_left']:.3f} nm, "
                 f"FWHM_left={metrics['fwhm_nm_at_Smax_left']:.3f} nm)"
             )
+
+# -----------------------------
+# Display table if it exists (moved outside button conditions)
+# -----------------------------
+if st.session_state.table is not None:
+    st.subheader("R-lam results")
+    st.dataframe(st.session_state.table, use_container_width=True)
+
+    csv = st.session_state.table.to_csv(index=False).encode("utf-8")
+    st.download_button(
+        "Download CSV (RI vs R-lam + FWHM)",
+        data=csv,
+        file_name=f"R_lambda_{st.session_state.current_materials}.csv",
+        mime="text/csv"
+    )
