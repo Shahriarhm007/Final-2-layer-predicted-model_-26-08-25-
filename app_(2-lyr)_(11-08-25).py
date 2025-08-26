@@ -111,7 +111,7 @@ with m2:
 
 btn1, btn2 = st.columns(2)
 with btn1:
-    st.latex(r"\lambda_R \text{ and FWHM}")
+    st.latex(r"Predict (\lambda_R (\text{ and FWHM)}")
     calc_btn = st.button("Predict", type="primary")
 with btn2:
     eval_btn = st.button("Evaluate Performance")
@@ -211,5 +211,6 @@ if st.session_state.metrics is not None:
         f"(λ_left={metrics['lambda_nm_at_Smax_left']:.3f} nm, "
         f"FWHM_left={metrics['fwhm_nm_at_Smax_left']:.3f} nm)"
     )
+
 
 
